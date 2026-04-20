@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neptune Tech Inc.</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html {
+            overflow-y: auto;
+            overflow-x: hidden
+        }
+
+        body {
+            width: 100%;
+            overflow-x: hidden;
+            background: #000;
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, sans-serif
+        }
+
+        html {
+            scrollbar-width: none;
+            -ms-overflow-style: none
+        }
+
+        html::-webkit-scrollbar {
+            width: 0;
+            height: 0
+        }
+
+        .top-scrollbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            z-index: 200;
+            background: rgba(255, 255, 255, .08);
+            pointer-events: none
+        }
+
+        .top-scrollbar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #8fb4e8 0%, #d6e7ff 52%, #9ac3f5 100%);
+            box-shadow: 0 0 12px rgba(170, 205, 255, .58);
+            transition: width .08s linear
+        }
+
+        .fixed-scene {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            pointer-events: none
+        }
+
+        /* HERO */
+        .hero-scene {
+            z-index: 10;
+            background: #000
+        }
+
+        .arch-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none
+        }
+
+        .arch-img {
+            position: absolute;
+            bottom: 18%;
+            left: 0;
+            width: 100%;
+            height: auto;
+            display: block;
+            clip-path: inset(0 100% 0 0);
+        }
+
+        .logo-wrap {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            user-select: none;
+            transform: translateY(80px)
+        }
+
+        .logo-main {
+            display: block;
+            font-size: clamp(24px, 4.4vw, 76px);
+            font-weight: 700;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            color: #fff;
+            line-height: 1
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+            pointer-events: none;
+            transition: opacity .4s ease
+        }
+
+        .scroll-hint span {
+            font-size: 9px;
+            letter-spacing: .4em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, .35)
+        }
+
+        .scroll-hint-line {
+            width: 1px;
+            height: 36px;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, .5), transparent);
+            animation: lineAnim 2s ease-in-out infinite
+        }
+
+        @keyframes lineAnim {
+            0% { transform: scaleY(0); transform-origin: top; opacity: 1 }
+            50% { transform: scaleY(1); transform-origin: top; opacity: 1 }
+            100% { transform: scaleY(1); transform-origin: bottom; opacity: 0 }
+        }
+
+        @media (max-width:860px) {
+            .logo-wrap { text-align: center }
+            .logo-main { font-size: clamp(18px, 7vw, 36px); letter-spacing: .03em }
+        }
+
+        /* PORTAL */
+        .portal-scene {
+            z-index: 20;
+            opacity: 0
+        }
+
+        .portal-mask {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            clip-path: circle(0% at 50% 50%);
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .portal-spacecraft-bg {
+            position: absolute;
+            width: 110%;
+            height: 110%;
+            background: url('https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=2500&auto=format&fit=crop') center/cover;
+            z-index: 21
+        }
+
+        /* =============================================
+           VISOR SPACE LAYER — fades in as we zoom in
+           ============================================= */
+        .visor-space {
+            position: absolute;
+            width: 110%;
+            height: 110%;
+            background: url('space.jpg') center/cover;
+            z-index: 22;
+            opacity: 0;
+            /* Slight radial vignette at edges for depth */
+            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 50%, transparent 100%);
+            -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 50%, transparent 100%)
+        }
+
+        .astronaut {
+            position: absolute;
+            right: 15%;
+            top: 25%;
+            width: 35vw;
+            max-width: 450px;
+            z-index: 25;
+            transform-origin: center center;
+            filter: drop-shadow(0px 20px 30px rgba(0, 0, 0, .8))
+        }
+
+        .white-glow-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at 62% 38%, #fff 0%, #c8e4ff 40%, #2a6aad 80%, transparent 100%);
+            z-index: 28;
+            opacity: 1
+        }
+
+        /* Lens flare ring that pulses at zoom peak */
+        .visor-flash {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse 55% 45% at 62% 36%, 
+                rgba(255,255,255,1) 0%, 
+                rgba(200,230,255,0.85) 20%, 
+                rgba(140,195,255,0.5) 50%, 
+                transparent 75%);
+            z-index: 29;
+            opacity: 0;
+            pointer-events: none
+        }
+
+        .portal-info {
+            position: absolute;
+            top: clamp(32px, 6vh, 72px);
+            left: clamp(28px, 5vw, 72px);
+            z-index: 30;
+            max-width: clamp(220px, 30vw, 400px);
+            opacity: 0;
+            transform: translateY(18px);
+            pointer-events: none
+        }
+
+        .portal-info-tag {
+            display: inline-block;
+            font-size: clamp(8px, 0.85vw, 11px);
+            letter-spacing: .42em;
+            text-transform: uppercase;
+            color: rgba(0, 0, 0, .5);
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 0, 0, .18);
+            width: 100%
+        }
+
+        .portal-info-title {
+            font-size: clamp(22px, 3.2vw, 46px);
+            font-weight: 700;
+            letter-spacing: .04em;
+            line-height: 1.08;
+            color: #000;
+            margin-bottom: 14px;
+            text-shadow: none
+        }
+
+        .portal-info-title em {
+            font-style: normal;
+            color: rgba(0, 80, 160, 0.85)
+        }
+
+        .portal-info-desc {
+            font-size: clamp(11px, 1.05vw, 15px);
+            font-weight: 300;
+            line-height: 1.7;
+            color: rgba(0, 0, 0, .6);
+            letter-spacing: .02em
+        }
+
+        .portal-info-desc strong {
+            color: rgba(0, 0, 0, .85);
+            font-weight: 500
+        }
+
+        .portal-info::before {
+            content: '';
+            position: absolute;
+            left: -18px;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0, 80, 160, 0.5), rgba(0, 80, 160, 0));
+            border-radius: 2px
+        }
+
+        /* FINAL GALAXY */
+        .final-scene {
+            z-index: 30;
+            opacity: 0;
+            background: #000
+        }
+
+        .final-galaxy {
+            position: absolute;
+            width: 120%;
+            height: 120%;
+            background: url('space.jpg') center/cover;
+            opacity: .8;
+            z-index: 31
+        }
+
+        .final-text {
+            position: relative;
+            z-index: 37;
+            font-size: clamp(18px, 4vw, 52px);
+            font-weight: 300;
+            letter-spacing: .2em;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(50px);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, .8)
+        }
+
+        #blackholeWrap {
+            position: absolute;
+            z-index: 33;
+            width: clamp(200px, 30vw, 480px);
+            left: 88%;
+            top: 82%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0;
+            will-change: left, top, opacity;
+        }
+
+        #blackholeSpinner {
+            width: 100%;
+            transform-origin: center center;
+            animation: asteroidSpin 9s linear infinite;
+        }
+
+        #blackholeSpinner img {
+            width: 100%;
+            height: auto;
+            display: block;
+            filter:
+                drop-shadow(0 0 18px rgba(255, 130, 50, 0.65)) drop-shadow(0 0 55px rgba(200, 70, 0, 0.40)) drop-shadow(0 0 110px rgba(255, 60, 0, 0.20));
+            animation: asteroidGlow 4s ease-in-out infinite;
+        }
+
+        @keyframes asteroidSpin {
+            from { transform: rotate(0deg) }
+            to { transform: rotate(360deg) }
+        }
+
+        @keyframes asteroidGlow {
+            0%, 100% {
+                filter: drop-shadow(0 0 18px rgba(255, 130, 50, 0.65)) drop-shadow(0 0 55px rgba(200, 70, 0, 0.40)) drop-shadow(0 0 110px rgba(255, 60, 0, 0.20))
+            }
+            50% {
+                filter: drop-shadow(0 0 30px rgba(255, 160, 60, 0.90)) drop-shadow(0 0 80px rgba(220, 80, 0, 0.60)) drop-shadow(0 0 160px rgba(255, 80, 0, 0.30))
+            }
+        }
+
+        #craftWrap {
+            position: absolute;
+            z-index: 36;
+            width: clamp(180px, 28vw, 420px);
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            will-change: transform;
+            opacity: 0
+        }
+
+        #craftWrap img {
+            width: 100%;
+            height: auto;
+            display: block;
+            filter: drop-shadow(0 0 40px rgba(120, 180, 255, 0.45)) drop-shadow(0 0 12px rgba(180, 220, 255, 0.3));
+            animation: craftGlow 4s ease-in-out infinite
+        }
+
+        @keyframes craftGlow {
+            0%, 100% {
+                filter: drop-shadow(0 0 40px rgba(120, 180, 255, 0.45)) drop-shadow(0 0 12px rgba(180, 220, 255, 0.3))
+            }
+            50% {
+                filter: drop-shadow(0 0 52px rgba(140, 200, 255, 0.7)) drop-shadow(0 0 18px rgba(220, 240, 255, 0.5))
+            }
+        }
+
+        .scroll-track {
+            position: relative;
+            z-index: 1
+        }
+
+        .s1-hero { height: 364vh }
+        .s2-portal { height: 910vh }
+        .s3-final { height: 676vh }
+    </style>
+</head>
+
+<body>
+
+    <div class="top-scrollbar" aria-hidden="true">
+        <div class="top-scrollbar-fill" id="topScrollbarFill"></div>
+    </div>
+
+    <!-- SCENE 1: HERO -->
+    <div class="fixed-scene hero-scene">
+        <div class="arch-container">
+            <img class="arch-img" src="./arch.png" alt="" />
+        </div>
+        <div class="logo-wrap">
+            <span class="logo-main">NEPTUNE TECH INC.</span>
+        </div>
+        <div class="scroll-hint" id="scrollHint">
+            <span>Scroll</span>
+            <div class="scroll-hint-line"></div>
+        </div>
+    </div>
+
+    <!-- SCENE 2: PORTAL / ASTRONAUT -->
+    <div class="fixed-scene portal-scene">
+        <div class="portal-mask">
+            <div class="white-glow-overlay"></div>
+            <!-- Space layer revealed through the visor zoom -->
+            <div class="visor-space"></div>
+            <div class="portal-spacecraft-bg"></div>
+            <img src="./astronaut.png" alt="Astronaut" class="astronaut" />
+            <!-- Lens flare flash at zoom peak -->
+            <div class="visor-flash"></div>
+        </div>
+        <div class="portal-info" id="portalInfo">
+            <span class="portal-info-tag">Mission Brief · 2024</span>
+            <h2 class="portal-info-title">Life Beyond<br>the <em>Atmosphere</em></h2>
+            <p class="portal-info-desc">
+                Neptune Tech pioneers <strong>next-generation orbital systems</strong> built for the extremes of deep
+                space.
+                Our astronauts operate at the edge of human capability — where innovation and survival are the same
+                thing.
+            </p>
+        </div>
+    </div>
+
+    <!-- SCENE 3: FINAL GALAXY -->
+    <div class="fixed-scene final-scene">
+        <div class="final-galaxy"></div>
+        <canvas id="fireCanvas"
+            style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:32;pointer-events:none;"></canvas>
+        <div id="blackholeWrap">
+            <div id="blackholeSpinner">
+                <img src="./asteroid.png" alt="Asteroid" />
+            </div>
+        </div>
+        <div id="craftWrap">
+            <img src="./space-craft.png" alt="Spacecraft" />
+        </div>
+        <h2 class="final-text">Exploring Beyond Boundaries</h2>
+    </div>
+
+    <!-- SCROLL TRACK -->
+    <div class="scroll-track">
+        <div class="scroll-section s1-hero"></div>
+        <div class="scroll-section s2-portal"></div>
+        <div class="scroll-section s3-final"></div>
+    </div>
+
+    <script>
+        gsap.registerPlugin(MotionPathPlugin, ScrollTrigger);
+
+        /* ================================================================
+           ARCH IMAGE REVEAL
+        ================================================================ */
+        const archImg = document.querySelector('.arch-img');
+        const scrollHint = document.getElementById('scrollHint');
+        const topScrollbarFill = document.getElementById('topScrollbarFill');
+
+        gsap.set(archImg, { clipPath: 'inset(0 100% 0 0)' });
+
+        const tlArc = gsap.timeline({ paused: true });
+        tlArc.to(archImg, {
+            clipPath: 'inset(0 0% 0 0)',
+            duration: 1,
+            ease: 'power1.inOut'
+        });
+
+        ScrollTrigger.create({
+            trigger: '.s1-hero', start: 'top top', end: '+=800', scrub: 1,
+            onUpdate(self) { tlArc.progress(self.progress); }
+        });
+
+        function updateScrollUI() {
+            const max = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = max > 0 ? (window.scrollY / max) * 100 : 0;
+            topScrollbarFill.style.width = `${Math.max(0, Math.min(100, progress)).toFixed(2)}%`;
+            scrollHint.style.opacity = window.scrollY > 60 ? '0' : '1';
+        }
+
+        window.addEventListener('scroll', updateScrollUI, { passive: true });
+        window.addEventListener('resize', updateScrollUI);
+        updateScrollUI();
+
+        /* ================================================================
+           PORTAL / ASTRONAUT
+           
+           Circle clip-path: starts at position 1, runs for duration 6
+           → fully open at timeline position 7.
+           Portal info now fades in at 7.0 (after circle is fully open)
+           and fades out at 9.0 to stay clear of the final transition.
+        ================================================================ */
+        gsap.set('.portal-spacecraft-bg', { scale: 1.3 });
+        gsap.set('.astronaut', { scale: 0.45, y: 280, x: -1100, rotation: -25, opacity: 0.6 });
+        gsap.set('.white-glow-overlay', { opacity: 1 });
+        gsap.set('.visor-space', { opacity: 0 });
+        gsap.set('.visor-flash', { opacity: 0 });
+        gsap.set('#portalInfo', { opacity: 0, y: 18 });
+
+        const tlPortal = gsap.timeline({
+            scrollTrigger: { trigger: '.s2-portal', start: 'top top', end: 'bottom top', scrub: 2 }
+        });
+        tlPortal
+            .to('.hero-scene', { opacity: 0, duration: 1 }, 0)
+            .to('.portal-scene', { opacity: 1, duration: 1 }, 0.5)
+            // Circle opens: position 1 → finishes at position 7 (1 + duration 6)
+            .to('.portal-mask', { clipPath: 'circle(150% at 50% 50%)', duration: 6, ease: 'power2.inOut' }, 1)
+            .to('.white-glow-overlay', { opacity: 0, duration: 3 }, 2.5)
+            .to('.portal-spacecraft-bg', { scale: 1, y: '-5%', duration: 8, ease: 'none' }, 1)
+            .to('.astronaut', { scale: 1.1, y: -150, x: 50, rotation: 5, opacity: 1, duration: 8, ease: 'power2.out' }, 1)
+            // ↓ FIXED: fade in only after circle is fully open (position 7)
+            .to('#portalInfo', { opacity: 1, y: 0, duration: 1.5, ease: 'power2.out' }, 7.0)
+            .to('#portalInfo', { opacity: 0, y: -12, duration: 1.5, ease: 'power1.in' }, 9.0);
+
+        /* ================================================================
+           ASTEROID
+        ================================================================ */
+        gsap.set('#blackholeWrap', { left: '0%', top: '0%', opacity: 0, scale: 0.7 });
+
+        /* ================================================================
+           FINAL GALAXY — with VISOR ZOOM TRANSITION
+        ================================================================ */
+        const tlFinal = gsap.timeline({
+            scrollTrigger: {
+                trigger: '.s3-final', start: 'top top', end: 'bottom top', scrub: 2,
+                onEnter() { startWandering(); },
+                onLeaveBack() { stopFire(); }
+            }
+        });
+
+        tlFinal
+            // — PHASE 1: Zoom into astronaut face —
+            .to('#portalInfo', { opacity: 0, y: -10, duration: 0.4, ease: 'power1.in' }, 0)
+            .to('.astronaut', {
+                scale: 22,
+                transformOrigin: '72% 30%',
+                ease: 'power3.in',
+                duration: 3.5
+            }, 0)
+            .to('.portal-spacecraft-bg', { opacity: 0, duration: 2, ease: 'power2.in' }, 0.6)
+
+            // — PHASE 2: Visor reveals space — 
+            .to('.visor-space', {
+                opacity: 1,
+                duration: 2.2,
+                ease: 'power2.inOut'
+            }, 1.0)
+            .to('.visor-space', {
+                maskImage: 'radial-gradient(ellipse 200% 200% at 50% 50%, black 50%, transparent 100%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 200% 200% at 50% 50%, black 50%, transparent 100%)',
+                duration: 2.5,
+                ease: 'power2.inOut'
+            }, 1.2)
+
+            // — PHASE 3: Lens-flare flash at zoom peak —
+            .to('.visor-flash', { opacity: 1, duration: 0.6, ease: 'power2.in' }, 2.5)
+            .to('.visor-flash', { opacity: 0, duration: 1.2, ease: 'power3.out' }, 3.1)
+
+            // — PHASE 4: Cross-fade into final scene —
+            .to('.final-scene', { opacity: 1, duration: 1.8, ease: 'power2.out' }, 2.8)
+            .to('.portal-scene', { opacity: 0, duration: 1.5 }, 3.2)
+
+            // Galaxy parallax drift
+            .to('.final-galaxy', { backgroundPositionY: '100%', duration: 10 }, 0)
+
+            // — PHASE 5: Asteroid entrance —
+            .to('#blackholeWrap', {
+                opacity: 1, left: '90%', top: '88%', scale: 0.85,
+                duration: 1.5, ease: 'power2.out'
+            }, 3.8)
+            .to('#blackholeWrap', {
+                left: '2%', top: '3%', scale: 1.2,
+                duration: 7, ease: 'power1.inOut',
+                onStart() { startFire(); },
+                onComplete() { stopFire(); },
+                onReverseComplete() { stopFire(); }
+            }, 5.0)
+
+            // Spacecraft wanders in
+            .to('#craftWrap', { opacity: 1, duration: 1.5, ease: 'power2.out' }, 4.0)
+
+            // Final headline
+            .to('.final-text', { opacity: 1, y: 0, duration: 3 }, 5.5);
+
+        /* ================================================================
+           ASTEROID FIRE TRAIL
+        ================================================================ */
+        const fireCanvas = document.getElementById('fireCanvas');
+        const fireCtx = fireCanvas.getContext('2d');
+
+        function resizeFire() {
+            fireCanvas.width = window.innerWidth;
+            fireCanvas.height = window.innerHeight;
+        }
+        resizeFire();
+        window.addEventListener('resize', resizeFire);
+
+        const fireParticles = [];
+        let fireActive = false;
+        let firePaused = true;
+        let lastAstX = null;
+        let lastAstY = null;
+        let smoothVX = 0;
+        let smoothVY = 0;
+
+        function getAsteroidCenter() {
+            const r = document.getElementById('blackholeWrap').getBoundingClientRect();
+            return { x: r.left + r.width * 0.5, y: r.top + r.height * 0.5 };
+        }
+
+        function emitFire(cx, cy, dvx, dvy) {
+            const spd = Math.sqrt(dvx * dvx + dvy * dvy);
+            if (spd < 0.05) return;
+            const tdx = -dvx / spd;
+            const tdy = -dvy / spd;
+            const baseAng = Math.atan2(tdy, tdx);
+            const count = Math.min(16, 5 + Math.floor(spd * 0.9));
+            for (let i = 0; i < count; i++) {
+                const angle = baseAng + (Math.random() - 0.5) * 1.1;
+                const pSpd = 1.0 + Math.random() * 3.8;
+                const oDist = 20 + Math.random() * 32;
+                fireParticles.push({
+                    x: cx + tdx * oDist + (Math.random() - 0.5) * 36,
+                    y: cy + tdy * oDist + (Math.random() - 0.5) * 36,
+                    vx: Math.cos(angle) * pSpd,
+                    vy: Math.sin(angle) * pSpd - 0.3,
+                    life: 0.85 + Math.random() * 0.15,
+                    decay: 0.016 + Math.random() * 0.022,
+                    size: 14 + Math.random() * 30,
+                });
+            }
+        }
+
+        function drawParticle(p) {
+            const t = 1 - p.life;
+            let r, g, b;
+            if (t < 0.20) { r = 255; g = 245; b = 190; }
+            else if (t < 0.45) { r = 255; g = 165; b = 15; }
+            else if (t < 0.70) { r = 235; g = 65; b = 0; }
+            else { r = 150; g = 20; b = 0; }
+            const alpha = p.life * (t < 0.55 ? 0.90 : 0.50);
+            const grd = fireCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+            grd.addColorStop(0, `rgba(${r},${g},${b},${alpha})`);
+            grd.addColorStop(0.5, `rgba(${r},${Math.floor(g * 0.5)},0,${alpha * 0.55})`);
+            grd.addColorStop(1, `rgba(${r},0,0,0)`);
+            fireCtx.beginPath();
+            fireCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            fireCtx.fillStyle = grd;
+            fireCtx.fill();
+        }
+
+        function fireLoop() {
+            if (!fireActive && fireParticles.length === 0) { firePaused = true; return; }
+            requestAnimationFrame(fireLoop);
+            const pos = getAsteroidCenter();
+            if (lastAstX !== null) {
+                const rawVX = pos.x - lastAstX;
+                const rawVY = pos.y - lastAstY;
+                smoothVX += (rawVX - smoothVX) * 0.28;
+                smoothVY += (rawVY - smoothVY) * 0.28;
+                if (fireActive) emitFire(pos.x, pos.y, smoothVX, smoothVY);
+            }
+            lastAstX = pos.x;
+            lastAstY = pos.y;
+            fireCtx.clearRect(0, 0, fireCanvas.width, fireCanvas.height);
+            fireCtx.globalCompositeOperation = 'lighter';
+            for (let i = fireParticles.length - 1; i >= 0; i--) {
+                const p = fireParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.035;
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                p.life -= p.decay;
+                p.size *= 0.975;
+                if (p.life <= 0 || p.size < 1) { fireParticles.splice(i, 1); continue; }
+                drawParticle(p);
+            }
+            fireCtx.globalCompositeOperation = 'source-over';
+        }
+
+        function startFire() {
+            fireActive = true;
+            lastAstX = null;
+            lastAstY = null;
+            smoothVX = 0;
+            smoothVY = 0;
+            if (firePaused) { firePaused = false; requestAnimationFrame(fireLoop); }
+        }
+
+        function stopFire() { fireActive = false; }
+
+        /* ================================================================
+           SPACECRAFT WANDERER
+        ================================================================ */
+        const wrap = document.getElementById('craftWrap');
+        let wandering = false;
+        const craftXMin = 0.64;
+        const craftXMax = 0.93;
+        const craftYMin = 0.07;
+        const craftYMax = 0.93;
+        let px = craftXMin + Math.random() * (craftXMax - craftXMin);
+        let py = 0.38 + Math.random() * 0.20;
+        let vx = 0, vy = 0;
+        let nx = Math.random() * 100;
+        let ny = Math.random() * 100 + 50;
+
+        function smoothNoise(t) {
+            return (
+                Math.sin(t * 0.7) * 0.50 + Math.sin(t * 1.3) * 0.30 +
+                Math.sin(t * 2.1) * 0.15 + Math.sin(t * 3.7) * 0.05
+            );
+        }
+
+        let heading = 0, headingVel = 0;
+        let moodTimer = 0, moodDuration = 0, moodDx = 0, moodDy = 0;
+
+        function pickMood() {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = 0.015 + Math.random() * 0.022;
+            moodDx = Math.cos(angle) * spd;
+            moodDy = Math.sin(angle) * spd;
+            moodDuration = 3.5 + Math.random() * 5.5;
+            moodTimer = 0;
+        }
+        pickMood();
+
+        function repel(pos, lo, hi) {
+            const m = 0.13;
+            if (pos < lo + m) return (m - (pos - lo)) * 0.05;
+            if (pos > hi - m) return -(m - (hi - pos)) * 0.05;
+            return 0;
+        }
+
+        let lastTs = null;
+
+        function wanderFrame(ts) {
+            if (!wandering) return;
+            if (!lastTs) lastTs = ts;
+            const dt = Math.min((ts - lastTs) / 1000, 0.05);
+            lastTs = ts;
+            nx += dt * 0.16; ny += dt * 0.19;
+            const ax = smoothNoise(nx) * 0.006;
+            const ay = smoothNoise(ny) * 0.006;
+            moodTimer += dt;
+            if (moodTimer > moodDuration) pickMood();
+            const mf = Math.min(moodTimer / 0.8, 1);
+            vx = (vx + (ax + moodDx * mf * dt) + repel(px, craftXMin, craftXMax) * dt) * 0.965;
+            vy = (vy + (ay + moodDy * mf * dt) + repel(py, craftYMin, craftYMax) * dt) * 0.965;
+            const spd = Math.sqrt(vx * vx + vy * vy), maxV = 0.055;
+            if (spd > maxV) { vx = vx / spd * maxV; vy = vy / spd * maxV; }
+            px = Math.max(craftXMin, Math.min(craftXMax, px + vx * dt));
+            py = Math.max(craftYMin, Math.min(craftYMax, py + vy * dt));
+            if (spd > 0.001) {
+                const target = Math.atan2(vy, vx) * (180 / Math.PI) + 45;
+                headingVel += (((target - heading + 180) % 360 + 360) % 360 - 180) * 2.5 * dt;
+            }
+            headingVel *= 0.78;
+            heading += headingVel * dt;
+            wrap.style.left = (px * window.innerWidth) + 'px';
+            wrap.style.top = (py * window.innerHeight) + 'px';
+            wrap.style.transform = `translate(-50%,-50%) rotate(${heading}deg)`;
+            requestAnimationFrame(wanderFrame);
+        }
+
+        function startWandering() {
+            if (wandering) return;
+            wandering = true; lastTs = null;
+            requestAnimationFrame(wanderFrame);
+        }
+    </script>
+</body>
+
+</html>

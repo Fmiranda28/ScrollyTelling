@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CITY — A Visual Journey</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --frames: 56;
+    --accent: #f0c040;
+    --dark: #080808;
+  }
+
+  html { scroll-behavior: auto; }
+
+  body {
+    background: var(--dark);
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  /* ── INTRO ── */
+  #intro {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--dark);
+    pointer-events: none;
+    transition: opacity 0.8s ease;
+  }
+  #intro.hide { opacity: 0; pointer-events: none; }
+
+  #intro h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(6rem, 20vw, 18rem);
+    letter-spacing: 0.05em;
+    line-height: 0.9;
+    color: var(--accent);
+    animation: flicker 3s infinite alternate;
+  }
+
+  #intro p {
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+    margin-top: 1.5rem;
+    animation: blink 1.4s step-end infinite;
+  }
+
+  @keyframes flicker {
+    0%,100% { text-shadow: 0 0 40px rgba(240,192,64,0.6); }
+    50% { text-shadow: 0 0 80px rgba(240,192,64,0.2); }
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; } 50% { opacity: 0; }
+  }
+
+  /* ── SCROLL CONTAINER ── */
+  #scroller {
+    height: calc(var(--frames) * 110px + 100vh);
+    position: relative;
+  }
+
+  /* ── STICKY CANVAS ── */
+  #stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #frame-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    image-rendering: auto;
+  }
+
+  /* ── OVERLAY VIGNETTE ── */
+  #stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%),
+      linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  #frame-counter {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    opacity: 0.8;
+  }
+
+  #progress-bar {
+    width: 120px;
+    height: 2px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  #progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+
+  /* ── CORNER LABELS ── */
+  #top-left {
+    position: fixed;
+    top: 2rem;
+    left: 2rem;
+    z-index: 50;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.15em;
+    color: #fff;
+    mix-blend-mode: difference;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+
+  #top-right {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 50;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+
+  #story-text {
+    position: fixed;
+    left: 2rem;
+    bottom: 5rem;
+    z-index: 50;
+    max-width: min(32rem, calc(100vw - 4rem));
+    font-size: 0.85rem;
+    line-height: 1.7;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #f7f1c8;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+    background: rgba(8, 8, 8, 0.78);
+    border: 2px solid rgba(240, 192, 64, 0.7);
+    border-radius: 0;
+    box-shadow:
+      0 0 0 2px rgba(0,0,0,0.45),
+      0 10px 30px rgba(0,0,0,0.45),
+      inset 0 0 0 1px rgba(255,255,255,0.08);
+    padding: 0.95rem 1.1rem;
+    opacity: 0;
+    transform: translateY(0);
+    transition:
+      opacity 0.45s ease,
+      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      bottom 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      left 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      right 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+
+  #story-text.story-bottom-left {
+    left: 2rem;
+    bottom: 5rem;
+    right: auto;
+    top: auto;
+    transform: translateY(0);
+  }
+
+  #story-text.story-upper-right {
+    left: auto;
+    top: 2rem;
+    right: 2rem;
+    bottom: auto;
+    transform: translateY(-8px);
+  }
+
+  #story-text.story-upper-left {
+    left: 2rem;
+    top: 2rem;
+    right: auto;
+    bottom: auto;
+    transform: translateY(0);
+  }
+
+  #story-text.story-bottom-right {
+    left: auto;
+    bottom: 5rem;
+    right: 2rem;
+    top: auto;
+    transform: translateY(0);
+  }
+
+  #story-text.show-ui {
+    opacity: 1 !important;
+    transform: translateY(0);
+  }
+
+  .show-ui { opacity: 1 !important; }
+
+  /* ── SCANLINES ── */
+  #scanlines {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+    opacity: 0.5;
+  }
+
+  /* ── OUTRO ── */
+  #outro {
+    position: relative;
+    z-index: 10;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--dark);
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+
+  #outro h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 10vw, 9rem);
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    line-height: 1;
+  }
+
+  #outro p {
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+  }
+
+  /* ── GRAIN OVERLAY ── */
+  #grain {
+    position: fixed;
+    inset: -50%;
+    z-index: 45;
+    pointer-events: none;
+    width: 200%;
+    height: 200%;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: grain-shift 0.15s steps(1) infinite;
+  }
+  @keyframes grain-shift {
+    0%   { transform: translate(0,0); }
+    25%  { transform: translate(-2%,-3%); }
+    50%  { transform: translate(3%,1%); }
+    75%  { transform: translate(-1%,4%); }
+    100% { transform: translate(2%,-2%); }
+  }
+</style>
+</head>
+<body>
+
+<div id="grain"></div>
+<div id="scanlines"></div>
+
+<!-- INTRO SPLASH -->
+<div id="intro">
+  <h1>CITY</h1>
+  <p>scroll to begin</p>
+</div>
+
+<!-- STICKY SCROLL SECTION -->
+<div id="scroller">
+  <div id="stage">
+    <img id="frame-img" src="city-assets/scene00001.png" alt="City frame" draggable="false">
+  </div>
+</div>
+
+<!-- OUTRO -->
+<div id="outro">
+  <h2>END OF<br>THE LINE</h2>
+  <p>56 frames · one city · endless motion</p>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="frame-counter">FRAME 001 / 056</div>
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+</div>
+
+<div id="top-left">CITY</div>
+<div id="top-right">A VISUAL JOURNEY</div>
+<div id="story-text"></div>
+
+<script>
+  const TOTAL = 56;
+  const img = document.getElementById('frame-img');
+  const counter = document.getElementById('frame-counter');
+  const fill = document.getElementById('progress-fill');
+  const scroller = document.getElementById('scroller');
+  const intro = document.getElementById('intro');
+  const topLeft = document.getElementById('top-left');
+  const topRight = document.getElementById('top-right');
+  const storyText = document.getElementById('story-text');
+
+  const storyLines = [
+    'The city wakes in layers of light, one window at a time.',
+    'By noon, the streets carry a thousand footsteps and a hundred plans.',
+    'Evening falls softly, and the skyline begins to breathe.',
+    'Night arrives with neon rain, turning every corner into a memory.'
+  ];
+
+  const storyPositions = [
+    'story-bottom-left',
+    'story-upper-right',
+    'story-upper-left',
+    'story-bottom-right'
+  ];
+
+  // Preload all frames
+  const images = [];
+  for (let i = 1; i <= TOTAL; i++) {
+    const n = String(i).padStart(5, '0');
+    const image = new Image();
+    image.src = `city-assets/scene${n}.png`;
+    images.push(image);
+  }
+
+  let currentFrame = 0;
+  let introHidden = false;
+
+  function updateStory(frameIndex) {
+    if (frameIndex === TOTAL - 1) {
+      storyText.classList.remove('show-ui');
+      storyText.textContent = '';
+      storyText.className = '';
+      storyText.id = 'story-text';
+      return;
+    }
+
+    const storyIndex = Math.min(Math.floor(frameIndex / 15), storyLines.length - 1);
+    const nextStory = storyLines[storyIndex];
+    const nextPosition = storyPositions[storyIndex];
+
+    storyText.classList.remove(...storyPositions);
+    storyText.classList.add(nextPosition);
+
+    if (storyText.textContent !== nextStory) {
+      storyText.classList.remove('show-ui');
+      storyText.textContent = nextStory;
+      requestAnimationFrame(() => {
+        storyText.classList.add('show-ui');
+      });
+    }
+  }
+
+  function onScroll() {
+    const scrollTop = window.scrollY;
+    const scrollHeight = scroller.scrollHeight - window.innerHeight;
+    const progress = Math.min(Math.max(scrollTop / scrollHeight, 0), 1);
+
+    // Hide intro after first scroll
+    if (scrollTop > 50 && !introHidden) {
+      intro.classList.add('hide');
+      topLeft.classList.add('show-ui');
+      topRight.classList.add('show-ui');
+      storyText.classList.add('show-ui');
+      introHidden = true;
+    }
+
+    const frameIndex = Math.min(Math.floor(progress * TOTAL), TOTAL - 1);
+    updateStory(frameIndex);
+
+    if (frameIndex !== currentFrame) {
+      currentFrame = frameIndex;
+      const n = String(frameIndex + 1).padStart(5, '0');
+      img.src = `city-assets/scene${n}.png`;
+      const display = String(frameIndex + 1).padStart(3, '0');
+      counter.textContent = `FRAME ${display} / 056`;
+    }
+
+    fill.style.width = (progress * 100) + '%';
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
+</body>
+</html>
